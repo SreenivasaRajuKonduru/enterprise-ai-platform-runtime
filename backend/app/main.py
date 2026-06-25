@@ -10,6 +10,8 @@ from backend.app.db.base import Base
 from backend.app.db.session import engine
 from backend.app.db.models.user import User
 from backend.app.api.routes.protected import router as protected_router
+from backend.app.db.models.audit_log import AuditLog
+from backend.app.middleware.audit_middleware import AuditMiddleware
 
 
 app = FastAPI(
@@ -19,6 +21,7 @@ app = FastAPI(
 )
 app.include_router(auth_router)
 app.include_router(protected_router)
+app.add_middleware(AuditMiddleware)
 # Base.metadata.create_all(bind=engine)
 
 
