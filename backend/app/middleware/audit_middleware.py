@@ -8,6 +8,7 @@ from backend.app.core.security import ALGORITHM, SECRET_KEY
 from backend.app.db.session import SessionLocal
 from backend.app.repositories.audit_repository import AuditRepository
 from backend.app.services.audit_service import AuditService
+from backend.app.core.metrics import REQUEST_COUNT, REQUEST_LATENCY
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,18 @@ class AuditMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         latency_ms = int((time.time() - start_time) * 1000)
+        latency_seconds = latency_ms / 1000
+
+        REQUEST_COUNT.labels(
+            method=request.method,
+            path=request.url.path,
+            status_code=str(response.status_code),
+        ).inc()
+
+        REQUEST_LATENCY.labels(
+            method=request.method,
+            path=request.url.path,
+        ).observe(latency_seconds)
         client_ip = request.client.host if request.client else None
         request_id = getattr(request.state, "request_id", None)
 

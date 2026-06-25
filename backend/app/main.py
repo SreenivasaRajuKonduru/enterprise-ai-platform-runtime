@@ -16,6 +16,7 @@ from backend.app.middleware.request_id_middleware import RequestIdMiddleware
 from backend.app.core.logging import configure_logging
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from backend.app.core.tracing import configure_tracing
+from backend.app.core.metrics import metrics_response
 
 
 configure_logging()
@@ -68,3 +69,7 @@ def readiness_check():
         "database": "connected" if db_ok else "disconnected",
         "redis": "connected" if redis_ok else "disconnected",
     }
+    
+@app.get("/metrics")
+def metrics():
+    return metrics_response()

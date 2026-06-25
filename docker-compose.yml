@@ -65,5 +65,16 @@ services:
       - api-1
       - api-2
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ai-platform-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - api-1
+      - api-2
+
 volumes:
   postgres_data:
