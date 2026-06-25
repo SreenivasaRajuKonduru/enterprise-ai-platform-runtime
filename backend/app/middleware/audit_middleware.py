@@ -38,7 +38,9 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
         try:
             service = AuditService(AuditRepository(db))
+            request_id = getattr(request.state, "request_id", None)
             service.record_request(
+                request_id=request_id,
                 user_email=user_email,
                 role=role,
                 method=request.method,

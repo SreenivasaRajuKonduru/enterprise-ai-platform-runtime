@@ -7,6 +7,7 @@ class AuditService:
 
     def record_request(
         self,
+        request_id: str | None,
         user_email: str | None,
         role: str | None,
         method: str,
@@ -16,6 +17,7 @@ class AuditService:
         latency_ms: int,
     ):
         return self.repository.create(
+            request_id=request_id,
             user_email=user_email,
             role=role,
             method=method,

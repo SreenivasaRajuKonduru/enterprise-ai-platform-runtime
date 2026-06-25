@@ -9,6 +9,7 @@ class AuditRepository:
 
     def create(
         self,
+        request_id: str | None,
         user_email: str | None,
         role: str | None,
         method: str,
@@ -18,6 +19,7 @@ class AuditRepository:
         latency_ms: int,
     ) -> AuditLog:
         audit_log = AuditLog(
+            request_id=request_id,
             user_email=user_email,
             role=role,
             method=method,
@@ -30,5 +32,6 @@ class AuditRepository:
         self.db.add(audit_log)
         self.db.commit()
         self.db.refresh(audit_log)
+        
 
         return audit_log

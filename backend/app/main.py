@@ -12,6 +12,7 @@ from backend.app.db.models.user import User
 from backend.app.api.routes.protected import router as protected_router
 from backend.app.db.models.audit_log import AuditLog
 from backend.app.middleware.audit_middleware import AuditMiddleware
+from backend.app.middleware.request_id_middleware import RequestIdMiddleware
 
 
 app = FastAPI(
@@ -22,6 +23,7 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(protected_router)
 app.add_middleware(AuditMiddleware)
+app.add_middleware(RequestIdMiddleware)
 # Base.metadata.create_all(bind=engine)
 
 

@@ -10,6 +10,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    request_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     user_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[str | None] = mapped_column(String(50), nullable=True)
     method: Mapped[str] = mapped_column(String(20), nullable=False)
