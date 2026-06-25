@@ -1,3 +1,4 @@
+import logging
 import time
 
 from jose import JWTError, jwt
@@ -7,6 +8,8 @@ from backend.app.core.security import ALGORITHM, SECRET_KEY
 from backend.app.db.session import SessionLocal
 from backend.app.repositories.audit_repository import AuditRepository
 from backend.app.services.audit_service import AuditService
+
+logger = logging.getLogger(__name__)
 
 
 class AuditMiddleware(BaseHTTPMiddleware):
@@ -33,12 +36,23 @@ class AuditMiddleware(BaseHTTPMiddleware):
 
         latency_ms = int((time.time() - start_time) * 1000)
         client_ip = request.client.host if request.client else None
+        request_id = getattr(request.state, "request_id", None)
+
+        logger.info(
+            "request_completed",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "latency_ms": latency_ms,
+            },
+        )
 
         db = SessionLocal()
 
         try:
             service = AuditService(AuditRepository(db))
-            request_id = getattr(request.state, "request_id", None)
             service.record_request(
                 request_id=request_id,
                 user_email=user_email,

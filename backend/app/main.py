@@ -13,8 +13,10 @@ from backend.app.api.routes.protected import router as protected_router
 from backend.app.db.models.audit_log import AuditLog
 from backend.app.middleware.audit_middleware import AuditMiddleware
 from backend.app.middleware.request_id_middleware import RequestIdMiddleware
+from backend.app.core.logging import configure_logging
 
 
+configure_logging()
 app = FastAPI(
     title="Enterprise AI Platform Runtime",
     description="Production-grade AI Platform",
