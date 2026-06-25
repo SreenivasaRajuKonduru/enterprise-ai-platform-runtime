@@ -14,9 +14,13 @@ from backend.app.db.models.audit_log import AuditLog
 from backend.app.middleware.audit_middleware import AuditMiddleware
 from backend.app.middleware.request_id_middleware import RequestIdMiddleware
 from backend.app.core.logging import configure_logging
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from backend.app.core.tracing import configure_tracing
 
 
 configure_logging()
+configure_tracing()
+
 app = FastAPI(
     title="Enterprise AI Platform Runtime",
     description="Production-grade AI Platform",
@@ -26,6 +30,7 @@ app.include_router(auth_router)
 app.include_router(protected_router)
 app.add_middleware(AuditMiddleware)
 app.add_middleware(RequestIdMiddleware)
+FastAPIInstrumentor.instrument_app(app)
 # Base.metadata.create_all(bind=engine)
 
 
