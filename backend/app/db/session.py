@@ -21,22 +21,35 @@ SessionLocal = sessionmaker(
 )
 
 def check_database_connection() -> bool:
-    with tracer.start_as_current_span("postgres.health_check"):
+    with tracer.start_as_current_span("postgres.health_check") as span:
+        span.set_attribute("db.system", "postgresql")
+        span.set_attribute("db.operation", "SELECT")
+        span.set_attribute("db.statement", "SELECT 1")
+
         try:
             with engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
+            span.set_attribute("health.status", "connected")
             return True
-        except Exception:
+        except Exception as exc:
+            span.set_attribute("health.status", "disconnected")
+            span.record_exception(exc)
             return False
     
 redis_client = redis.Redis.from_url(settings.redis_url)
 
 def check_redis_connection() -> bool:
-    with tracer.start_as_current_span("redis.health_check"):
+    with tracer.start_as_current_span("redis.health_check") as span:
+        span.set_attribute("cache.system", "redis")
+        span.set_attribute("cache.operation", "PING")
+
         try:
             redis_client.ping()
+            span.set_attribute("health.status", "connected")
             return True
-        except Exception:
+        except Exception as exc:
+            span.set_attribute("health.status", "disconnected")
+            span.record_exception(exc)
             return False
 
 def get_db():
