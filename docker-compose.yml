@@ -6,11 +6,13 @@ services:
     container_name: ai-platform-api-1
     environment:
       SERVICE_NAME: api-1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     env_file:
       - .env
     depends_on:
       - postgres
       - redis
+      - kafka
 
   api-2:
     build:
@@ -19,22 +21,45 @@ services:
     container_name: ai-platform-api-2
     environment:
       SERVICE_NAME: api-2
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     env_file:
       - .env
     depends_on:
       - postgres
       - redis
+      - kafka
 
   worker:
     build:
       context: .
       dockerfile: worker/Dockerfile
     container_name: ai-platform-worker
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     env_file:
       - .env
     depends_on:
       - postgres
       - redis
+      - kafka
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: ai-platform-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
   postgres:
     image: postgres:16
@@ -75,6 +100,20 @@ services:
     depends_on:
       - api-1
       - api-2
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ai-platform-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
 
 volumes:
   postgres_data:

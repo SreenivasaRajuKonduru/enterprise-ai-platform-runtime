@@ -30,6 +30,22 @@ class AuthService:
             role=role,
         )
 
+        try:
+            from backend.app.events.producer import publish_event
+            from backend.app.events.topics import USER_REGISTERED
+
+            publish_event(
+                USER_REGISTERED,
+                {
+                    "event_type": USER_REGISTERED,
+                    "user_id": user.id,
+                    "email": user.email,
+                    "role": user.role,
+                },
+            )
+        except Exception as e:
+            print("KAFKA PUBLISH ERROR:", str(e))
+
         return user
 
     def login(self, email: str, password: str):

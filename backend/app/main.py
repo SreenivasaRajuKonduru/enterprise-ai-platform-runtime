@@ -10,13 +10,18 @@ from backend.app.db.base import Base
 from backend.app.db.session import engine
 from backend.app.db.models.user import User
 from backend.app.api.routes.protected import router as protected_router
+from backend.app.api.routes.api_keys import router as api_keys_router
 from backend.app.db.models.audit_log import AuditLog
+from backend.app.db.models.api_key import ApiKey
 from backend.app.middleware.audit_middleware import AuditMiddleware
 from backend.app.middleware.request_id_middleware import RequestIdMiddleware
+from backend.app.middleware.rate_limit_middleware import RateLimitMiddleware
 from backend.app.core.logging import configure_logging
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from backend.app.core.tracing import configure_tracing
 from backend.app.core.metrics import metrics_response
+from backend.app.api.routes.ops import router as ops_router
+from backend.app.api.routes.ai_runtime import router as ai_runtime_router
 
 
 configure_logging()
@@ -29,10 +34,14 @@ app = FastAPI(
 )
 app.include_router(auth_router)
 app.include_router(protected_router)
+app.include_router(api_keys_router)
 app.add_middleware(AuditMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=20)
 app.add_middleware(RequestIdMiddleware)
 FastAPIInstrumentor.instrument_app(app)
-# Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
+app.include_router(ops_router)
+app.include_router(ai_runtime_router)
 
 
 @app.get("/")
