@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
 from backend.app.rag.ingestion import ingest_document
 from backend.app.rag.retriever import retrieve_relevant_chunks
+from backend.app.rag.answer_service import generate_rag_answer
 
 router = APIRouter(prefix="/ai-runtime/documents", tags=["RAG Documents"])
 
@@ -58,3 +59,16 @@ def retrieve_documents_api(
             for row in results
         ],
     }
+
+class RagQuestionRequest(BaseModel):
+    question: str
+    
+@router.post("/ask")
+def ask_rag_api(
+    request: RagQuestionRequest,
+    db: Session = Depends(get_db),
+):
+    return generate_rag_answer(
+        db=db,
+        question=request.question,
+    )

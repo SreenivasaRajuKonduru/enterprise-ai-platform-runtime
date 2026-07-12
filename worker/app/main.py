@@ -5,6 +5,7 @@ import time
 import redis
 from confluent_kafka import Consumer, Producer, KafkaException
 
+
 BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 

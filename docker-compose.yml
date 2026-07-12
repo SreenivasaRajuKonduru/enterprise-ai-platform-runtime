@@ -6,13 +6,19 @@ services:
     container_name: ai-platform-api-1
     environment:
       SERVICE_NAME: api-1
+      ENVIRONMENT: local
+      DATABASE_URL: postgresql://ai_platform:ai_platform_password@postgres:5432/ai_platform_db
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     env_file:
       - .env
     depends_on:
       - postgres
       - redis
       - kafka
+      - otel-collector
+    networks:
+      - ai-platform-network
 
   api-2:
     build:
@@ -21,27 +27,85 @@ services:
     container_name: ai-platform-api-2
     environment:
       SERVICE_NAME: api-2
+      ENVIRONMENT: local
+      DATABASE_URL: postgresql://ai_platform:ai_platform_password@postgres:5432/ai_platform_db
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     env_file:
       - .env
     depends_on:
       - postgres
       - redis
       - kafka
+      - otel-collector
+    networks:
+      - ai-platform-network
 
-  worker:
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: worker/Dockerfile
+  #   container_name: ai-platform-worker
+  #   environment:
+  #     KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - kafka
+  #   networks:
+  #     - ai-platform-network
+
+  worker-1:
     build:
       context: .
-      dockerfile: worker/Dockerfile
-    container_name: ai-platform-worker
+      dockerfile: backend/Dockerfile
+    container_name: ai-platform-worker-1
+    command:
+      - python
+      - -m
+      - backend.app.workers.main
     environment:
+      SERVICE_NAME: worker-1
+      ENVIRONMENT: local
+      DATABASE_URL: postgresql://ai_platform:ai_platform_password@postgres:5432/ai_platform_db
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     env_file:
       - .env
     depends_on:
+      - kafka
       - postgres
       - redis
+      - otel-collector
+    networks:
+      - ai-platform-network
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ai-platform-worker-2
+    command:
+      - python
+      - -m
+      - backend.app.workers.main
+    environment:
+      SERVICE_NAME: worker-2
+      ENVIRONMENT: local
+      DATABASE_URL: postgresql://ai_platform:ai_platform_password@postgres:5432/ai_platform_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    env_file:
+      - .env
+    depends_on:
       - kafka
+      - postgres
+      - redis
+      - otel-collector
+    networks:
+      - ai-platform-network
 
   kafka:
     image: apache/kafka:latest
@@ -60,9 +124,11 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - ai-platform-network
 
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: ai-platform-postgres
     environment:
       POSTGRES_USER: ai_platform
@@ -72,12 +138,16 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai-platform-network
 
   redis:
     image: redis:7
     container_name: ai-platform-redis
     ports:
       - "6379:6379"
+    networks:
+      - ai-platform-network
 
   nginx:
     image: nginx:latest
@@ -85,10 +155,12 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api-1
       - api-2
+    networks:
+      - ai-platform-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -100,6 +172,8 @@ services:
     depends_on:
       - api-1
       - api-2
+    networks:
+      - ai-platform-network
 
   grafana:
     image: grafana/grafana:latest
@@ -114,6 +188,39 @@ services:
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
+    networks:
+      - ai-platform-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: ai-platform-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4317"
+      - "4318"
+    networks:
+      - ai-platform-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: ai-platform-otel-collector
+    command:
+      - --config=/etc/otelcol-contrib/config.yml
+    volumes:
+      - ./infra/otel/otel-collector-config.yml:/etc/otelcol-contrib/config.yml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - jaeger
+    networks:
+      - ai-platform-network
+
+networks:
+  ai-platform-network:
+    driver: bridge
 
 volumes:
   postgres_data:

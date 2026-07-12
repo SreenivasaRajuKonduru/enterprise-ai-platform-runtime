@@ -109,3 +109,15 @@ xxhash==3.7.1
 zstandard==0.25.0
 # 
 confluent-kafka==2.14.2
+sentence-transformers==5.0.0
+pgvector==0.4.1
+pypdf==6.0.0
+numpy==2.3.1
+openai
+requests
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-grpc
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-requests
+opentelemetry-instrumentation-sqlalchemy
