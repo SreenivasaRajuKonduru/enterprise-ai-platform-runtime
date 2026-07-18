@@ -121,6 +121,20 @@ class Job(Base):
         nullable=False,
         default=5,
     )
+    
+#     max_retries: Mapped[int] = mapped_column(
+#     Integer,
+#     nullable=False,
+#     default=5,
+# )
+
+    # Current platform semantics:
+    # max_retries represents the maximum total execution attempts,
+    # including the initial execution.
+    #
+    # Example:
+    # max_retries = 5
+    # 1 initial attempt + 4 retry attempts = 5 total attempts.
 
     idempotency_key: Mapped[str] = mapped_column(
         String(255),

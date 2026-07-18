@@ -16,11 +16,16 @@ from backend.app.db.session import (
     check_redis_connection,
     engine,
 )
+from backend.app.jobs.router import router as jobs_router
 from backend.app.middleware.audit_middleware import AuditMiddleware
 from backend.app.middleware.rate_limit_middleware import RateLimitMiddleware
 from backend.app.middleware.request_id_middleware import RequestIdMiddleware
 from backend.app.observability.tracing import configure_tracing
 from backend.app.rag.router import router as rag_router
+
+from backend.app.resilience.router import (
+    router as circuit_breaker_router,
+)
 
 
 configure_logging()
@@ -41,13 +46,15 @@ app.add_middleware(
 
 app.add_middleware(RequestIdMiddleware)
 
-
+app.include_router(circuit_breaker_router)
 app.include_router(auth_router)
 app.include_router(protected_router)
 app.include_router(api_keys_router)
 app.include_router(ops_router)
 app.include_router(ai_runtime_router)
 app.include_router(rag_router)
+app.include_router(jobs_router)
+
 
 
 @app.get("/")
@@ -111,4 +118,8 @@ def metrics():
 #         }
 
 
-configure_tracing(app, engine)
+# configure_tracing(app, engine)
+configure_tracing(
+    app=app,
+    engine=engine,
+)

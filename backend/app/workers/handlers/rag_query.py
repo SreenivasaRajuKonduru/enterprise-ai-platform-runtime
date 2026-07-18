@@ -17,12 +17,16 @@ def handle_rag_query(
         raise ValueError(
             "RAG_QUERY payload must contain a non-empty question."
         )
+        
+    if question.strip() == "FAIL_TEST":
+        raise RuntimeError("Intentional retry test failure")
 
     result = generate_rag_answer(
         db=db,
         question=question.strip(),
     )
 
+    
     return {
         **result,
         "handler": "rag_query",

@@ -13,7 +13,9 @@ from backend.app.db.models.api_key import ApiKey
 
 from backend.app.rag.models import DocumentChunk
 from backend.app.jobs.models import Job
+from backend.app.jobs.replay_models import JobReplay
 from backend.app.outbox.models import OutboxEvent
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

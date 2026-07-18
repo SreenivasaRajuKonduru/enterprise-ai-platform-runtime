@@ -1,4 +1,6 @@
+import logging
 import os
+from threading import Lock
 
 from fastapi import FastAPI
 from opentelemetry import trace
@@ -13,48 +15,107 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from sqlalchemy.engine import Engine
 
+logger = logging.getLogger(__name__)
 
-def configure_tracing(app: FastAPI, engine: Engine) -> None:
-    service_name = os.getenv("SERVICE_NAME", "ai-platform-api")
+_tracing_lock = Lock()
+_tracing_initialized = False
+_requests_instrumented = False
+_sqlalchemy_instrumented = False
 
-    resource = Resource.create(
-        {
-            "service.name": service_name,
-            "service.namespace": "enterprise-ai-platform",
-            "deployment.environment": os.getenv(
-                "ENVIRONMENT",
-                "local",
-            ),
-        }
+
+def configure_tracing(
+    *,
+    service_name: str | None = None,
+    app: FastAPI | None = None,
+    engine: Engine | None = None,
+) -> TracerProvider:
+    """
+    Configure OpenTelemetry for API and background services.
+
+    Safe to call once per process. Background processes such as workers,
+    outbox publishers and retry schedulers do not require a FastAPI app.
+    """
+
+    global _tracing_initialized
+    global _requests_instrumented
+    global _sqlalchemy_instrumented
+
+    resolved_service_name = service_name or os.getenv(
+        "SERVICE_NAME",
+        "enterprise-ai-platform",
     )
 
-    provider = TracerProvider(resource=resource)
+    with _tracing_lock:
+        current_provider = trace.get_tracer_provider()
 
-    exporter = OTLPSpanExporter(
-        endpoint=os.getenv(
-            "OTEL_EXPORTER_OTLP_ENDPOINT",
-            "http://otel-collector:4317",
-        ),
-        insecure=True,
-    )
+        if not _tracing_initialized:
+            resource = Resource.create(
+                {
+                    "service.name": resolved_service_name,
+                    "service.namespace": "enterprise-ai-platform",
+                    "deployment.environment.name": os.getenv(
+                        "ENVIRONMENT",
+                        "local",
+                    ),
+                }
+            )
 
-    provider.add_span_processor(
-        BatchSpanProcessor(exporter)
-    )
+            provider = TracerProvider(resource=resource)
 
-    trace.set_tracer_provider(provider)
+            exporter = OTLPSpanExporter(
+                endpoint=os.getenv(
+                    "OTEL_EXPORTER_OTLP_ENDPOINT",
+                    "http://otel-collector:4317",
+                ),
+                insecure=True,
+            )
 
-    FastAPIInstrumentor.instrument_app(
-        app,
-        tracer_provider=provider,
-        excluded_urls="health,ready,metrics",
-    )
+            provider.add_span_processor(
+                BatchSpanProcessor(exporter)
+            )
 
-    RequestsInstrumentor().instrument(
-        tracer_provider=provider
-    )
+            trace.set_tracer_provider(provider)
 
-    SQLAlchemyInstrumentor().instrument(
-        engine=engine,
-        tracer_provider=provider,
-    )
+            _tracing_initialized = True
+
+            logger.info(
+                "tracing_initialized",
+                extra={
+                    "service_name": resolved_service_name,
+                    "exporter_endpoint": os.getenv(
+                        "OTEL_EXPORTER_OTLP_ENDPOINT",
+                        "http://otel-collector:4317",
+                    ),
+                },
+            )
+
+        provider = trace.get_tracer_provider()
+
+        if not isinstance(provider, TracerProvider):
+            raise RuntimeError(
+                "OpenTelemetry TracerProvider was not initialized correctly"
+            )
+
+        if not _requests_instrumented:
+            RequestsInstrumentor().instrument(
+                tracer_provider=provider,
+            )
+            _requests_instrumented = True
+
+        if engine is not None and not _sqlalchemy_instrumented:
+            SQLAlchemyInstrumentor().instrument(
+                engine=engine,
+                tracer_provider=provider,
+            )
+            _sqlalchemy_instrumented = True
+
+        if app is not None:
+            FastAPIInstrumentor.instrument_app(
+                app,
+                tracer_provider=provider,
+                excluded_urls=(
+                    "health,ready,metrics"
+                ),
+            )
+
+        return provider

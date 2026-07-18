@@ -14,14 +14,10 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      kafka:
-        condition: service_started
-      otel-collector:
-        condition: service_started
+      - postgres
+      - redis
+      - kafka
+      - otel-collector
     networks:
       - ai-platform-network
 
@@ -40,14 +36,10 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      kafka:
-        condition: service_started
-      otel-collector:
-        condition: service_started
+      - postgres
+      - redis
+      - kafka
+      - otel-collector
     networks:
       - ai-platform-network
 
@@ -70,14 +62,9 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      kafka:
-        condition: service_started
-      otel-collector:
-        condition: service_started
+      - postgres
+      - kafka
+      - otel-collector
     networks:
       - ai-platform-network
     restart: unless-stopped
@@ -119,14 +106,10 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      kafka:
-        condition: service_started
-      otel-collector:
-        condition: service_started
+      - kafka
+      - postgres
+      - redis
+      - otel-collector
     networks:
       - ai-platform-network
     restart: unless-stopped
@@ -152,14 +135,10 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      kafka:
-        condition: service_started
-      otel-collector:
-        condition: service_started
+      - kafka
+      - postgres
+      - redis
+      - otel-collector
     networks:
       - ai-platform-network
     restart: unless-stopped
@@ -187,27 +166,14 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ai-platform-postgres
-
     environment:
       POSTGRES_USER: ai_platform
       POSTGRES_PASSWORD: ai_platform_password
       POSTGRES_DB: ai_platform_db
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ai_platform -d ai_platform_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-    restart: unless-stopped
-
     networks:
       - ai-platform-network
 
@@ -306,14 +272,9 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      kafka:
-        condition: service_started
-      otel-collector:
-        condition: service_started
+      - postgres
+      - kafka
+      - otel-collector
     networks:
       - ai-platform-network
     restart: unless-stopped
